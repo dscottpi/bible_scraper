@@ -100,13 +100,14 @@ class BibleMp3Spider(scrapy.Spider):
         chapter = response.xpath('//a[@id="reader_chapter"]/text()').extract()[0]
         filename = book + chapter + ".mp3"
 
-        #Get mp3 link
-        mp3_url = response.xpath('//audio[@id="reader_audio_player"]/@src').extract()[0]
-        mp3_url = mp3_url.split("?", 1)[0]
-        mp3_url = "http:" + mp3_url
+        if "intro" not in response.url:
+            #Get mp3 link
+            mp3_url = response.xpath('//audio[@id="reader_audio_player"]/@src').extract()[0]
+            mp3_url = mp3_url.split("?", 1)[0]
+            mp3_url = "http:" + mp3_url
 
-        download_thread = Thread(target = self.download_mp3, args = (mp3_url, filename))
-        download_thread.start()
+            download_thread = Thread(target = self.download_mp3, args = (mp3_url, filename))
+            download_thread.start()
 
         if book == "Revelation" and chapter == "22":
             raise CloseSpider("End of Bible")
