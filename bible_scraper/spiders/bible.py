@@ -53,7 +53,7 @@ class BibleSpider(scrapy.Spider):
 
         chapter_length = self.get_last_chapter(response, -1)
 
-        verse_string= '//span[@class="verse v%s"]/span[@class="content"]/text()'
+        verse_string= '//span[@class="verse v%s"]/span[@class="content" or @class="wj"]//text()'
         for i in range(1, int(chapter_length) + 1):
             extract_string = verse_string % i
             # xpath expression returns the verse in a list.
