@@ -7,14 +7,17 @@ from threading import Thread
 
 
 class BibleSpider(scrapy.Spider):
+
     name = "bible"
     allowed_domains = ["bible.com"]
 
     base_link = "http://bible.com"
 
-    # 111 is the code for the version, change the number to get a different version
-    start_urls = ["https://www.bible.com/bible/206/gen.1"]
     output = {}
+
+    # pass version in crawl command. e.g. scrapy crawl bible -a version=111
+    def __init__(self, version=''):
+        self.start_urls = ['https://www.bible.com/bible/%s/gen.1' % version]
 
     def join_verse(self, verse):
         return ''.join(verse)
@@ -28,6 +31,10 @@ class BibleSpider(scrapy.Spider):
             return chapter_length
         else:
             return self.get_last_chapter(response, index-1)
+
+    def write_file(self):
+        with open("output.json", 'w+') as test:
+            json.dump(self.output, test, indent=4, sort_keys=True)
 
     def parse(self, response):
 
@@ -54,8 +61,8 @@ class BibleSpider(scrapy.Spider):
             self.output[book][chapter][i] = verse
 
         if book == "Revelation" and chapter == "22":
-            with open("WEB.json", 'w+') as test:
-                json.dump(self.output, test, indent=4, sort_keys=True)
+            download_thread = Thread(target = self.write_file)
+            download_thread.start()
             raise CloseSpider("End of Bible")
         else:
             next_chapter = self.base_link + response.xpath('//a[@id="reader_next"]/@href').extract()[0]
@@ -67,8 +74,8 @@ class BibleMp3Spider(scrapy.Spider):
 
     base_link = "http://bible.com"
 
-    # 111 is the code for the version, change the number to get a different version
-    start_urls = ["https://www.bible.com/bible/206/gen.1"]
+    def __init__(self, version=''):
+        self.start_urls = ['https://www.bible.com/bible/%s/gen.1' % version]
     output = {}
 
     def join_verse(self, verse):
