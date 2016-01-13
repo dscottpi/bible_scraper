@@ -3,7 +3,9 @@ from scrapy.exceptions import CloseSpider
 import sys
 import json
 import urllib
+import os
 from threading import Thread
+import logging
 
 
 class BibleSpider(scrapy.Spider):
@@ -74,8 +76,12 @@ class BibleMp3Spider(scrapy.Spider):
 
     base_link = "http://bible.com"
 
+    book_index = 1
+
     def __init__(self, version=''):
         self.start_urls = ['https://www.bible.com/bible/%s/gen.1' % version]
+        self.version = version
+
     output = {}
 
     def join_verse(self, verse):
@@ -92,13 +98,31 @@ class BibleMp3Spider(scrapy.Spider):
             return self.get_last_chapter(response, index-1)
 
     # Thread function for downloading mp3
-    def download_mp3(self, mp3_url, filename):
+    def download_mp3(self, mp3_url, filename, folder):
+
+        directory = os.getcwd() + folder
+        logging.log(logging.WARNING, os.getcwd())
+        logging.log(logging.WARNING, "THIS IS THE FOLDER: " + directory)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            self.download_mp3(mp3_url, filename, folder)
+            return
+        else:
+            filename = os.path.join(directory, filename)
+
         urllib.urlretrieve (mp3_url, filename)
+        self.book_index += 1
+
+    def get_folder(self, url):
+        split = self.version + "/"
+        folder = url.split(split)[1]
+        folder = folder.split('.')[0]
+        return "/" + folder
+
 
     def parse(self, response):
         book = response.xpath('//a[@id="reader_book"]/text()').extract()[0]
         chapter = response.xpath('//a[@id="reader_chapter"]/text()').extract()[0]
-        filename = book + chapter + ".mp3"
 
         if "intro" not in response.url:
             #Get mp3 link
@@ -106,7 +130,10 @@ class BibleMp3Spider(scrapy.Spider):
             mp3_url = mp3_url.split("?", 1)[0]
             mp3_url = "http:" + mp3_url
 
-            download_thread = Thread(target = self.download_mp3, args = (mp3_url, filename))
+            folder = self.get_folder(response.url)
+            filename = chapter + folder.strip('/') + ".mp3"
+            folder = folder + "/"
+            download_thread = Thread(target = self.download_mp3, args = (mp3_url, filename, folder))
             download_thread.start()
 
         if book == "Revelation" and chapter == "22":
