@@ -7,6 +7,18 @@ import os
 from threading import Thread
 import logging
 
+def join_verse(verse):
+    return ''.join(verse)
+
+def get_xpath(response, xpath):
+    return response.xpath(xpath).extract()
+
+def get_last_verse(response, index):
+    chapter_length = response.xpath('//span[@class="label"]//text()').extract()[index]
+    if chapter_length != "#":
+        return chapter_length
+    else:
+        return get_last_verse(response, index-1)
 
 class BibleSpider(scrapy.Spider):
 
@@ -21,18 +33,6 @@ class BibleSpider(scrapy.Spider):
     def __init__(self, version=''):
         self.start_urls = ['https://www.bible.com/bible/%s/gen.1' % version]
 
-    def join_verse(self, verse):
-        return ''.join(verse)
-
-    def get_xpath(self, response, xpath):
-        return response.xpath(xpath).extract()
-
-    def get_last_chapter(self, response, index):
-        chapter_length = response.xpath('//span[@class="label"]//text()').extract()[index]
-        if chapter_length != "#":
-            return chapter_length
-        else:
-            return self.get_last_chapter(response, index-1)
 
     def write_file(self):
         with open("output.json", 'w+') as test:
@@ -53,13 +53,13 @@ class BibleSpider(scrapy.Spider):
         if chapter not in self.output[book]:
             self.output[book][chapter] = {}
 
-        chapter_length = self.get_last_chapter(response, -1)
+        chapter_length = get_last_verse(response, -1)
 
         verse_string= '//span[@class="verse v%s"]/span[@class="content" or @class="wj"]//text()'
         for i in range(1, int(chapter_length) + 1):
             extract_string = verse_string % i
             # xpath expression returns the verse in a list.
-            verse = self.join_verse(self.get_xpath(response, extract_string))
+            verse = join_verse(get_xpath(response, extract_string))
             self.output[book][chapter][i] = verse
 
         if book == "Revelation" and chapter == "22":
@@ -83,19 +83,6 @@ class BibleMp3Spider(scrapy.Spider):
         self.version = version
 
     output = {}
-
-    def join_verse(self, verse):
-        return ''.join(verse)
-
-    def get_xpath(self, response, xpath):
-        return response.xpath(xpath).extract()
-
-    def get_last_chapter(self, response, index):
-        chapter_length = response.xpath('//span[@class="label"]//text()').extract()[index]
-        if chapter_length != "#":
-            return chapter_length
-        else:
-            return self.get_last_chapter(response, index-1)
 
     # Thread function for downloading mp3
     def download_mp3(self, mp3_url, filename, folder):
